@@ -1,0 +1,191 @@
+1. On-Chain Smart Contracts
+1.1. AuditorRegistry
+State
+
+mapping(address ⇒ Auditor) auditors
+
+struct Auditor { uint256 stake; uint256 reputation; uint256 lockUntil; }
+
+Functions
+
+registerAuditor(uint256 amount)
+
+Requires GOV.transferFrom(msg.sender, this, amount)
+
+Lock stake for initialLock days, set reputation=0.
+
+slash(address auditor, uint256 amount)
+
+Called by AuditBountyManager on bad votes.
+
+Reduces stake and sends slashed tokens to InsuranceFund.
+
+updateReputation(address auditor, bool success)
+
+If success, reputation += 1, extend lock-up period; else reset lock.
+
+unstake(uint256 amount)
+
+Only if block.timestamp >= lockUntil and stake ≥ amount.
+
+1.2. AuditBountyManager
+State
+
+struct Bounty { uint256 id; address npo; uint256 milestoneId; uint256 rewardPool; uint256 stakeRequired; uint256 start; uint256 concernDeadline; address[] auditors; mapping(address ⇒ Vote) votes; }
+
+enum Vote { None, Pass, Fail }
+
+Functions
+
+createBounty(address npo, uint256 milestoneId, uint256 rewardPool)
+
+Transfer rewardPool into contract.
+
+Set start = now, concernDeadline = start + concernWindow.
+
+optInBounty(uint256 bountyId)
+
+Auditor calls to register interest; require auditors.length < N and stake≥stakeRequired.
+
+submitVote(uint256 bountyId, Vote vote, string reportCID, bytes[] evidence)
+
+Require now < concernDeadline.
+
+Record votes[msg.sender] = vote; store reportCID & evidence pointers.
+
+If any auditor calls with a vote == Fail, emit ConcernRaised(bountyId).
+
+finalizeBounty(uint256 bountyId) (anyone can call after concernWindow)
+
+If no concerns:
+
+Tally Pass vs Fail among auditors.
+
+Distribute rewardPool to majority voters; slash dissenters via AuditorRegistry.slash.
+
+If concerns raised: call startDispute(bountyId).
+
+1.3. DisputeManager
+State
+
+struct Dispute { uint256 bountyId; address[] panel; mapping(address ⇒ bool) panelVote; uint256 end; }
+
+Functions
+
+startDispute(uint256 bountyId)
+
+Draw M new auditors (via on-chain VRF), set end = now + disputeWindow.
+
+submitPanelVote(uint256 disputeId, bool overturn, string notesCID)
+
+Require panel member & before end.
+
+finalizeDispute(uint256 disputeId)
+
+Tally overturn votes. If overturn ≥ threshold, mark bounty as “failed”; else “passed”.
+
+Distribute rewards/slashes as in finalizeBounty.
+
+If “failed”, call EscrowManager.freezeMilestone.
+
+1.4. EscrowManager
+State
+
+mapping((address npo, uint256 milestoneId) ⇒ uint256) escrowed
+
+Functions
+
+deposit(address npo, uint256 milestoneId)
+
+Called by donor; transfers funds into escrow.
+
+release(address npo, uint256 milestoneId)
+
+Called by AuditBountyManager on success. Transfers funds to npo.
+
+freezeMilestone(address npo, uint256 milestoneId)
+
+Locks funds; can only be moved via a GovernanceManager proposal.
+
+1.5. GovernanceManager
+State
+
+Standard DAO: proposals, votes, execution.
+
+Functions
+
+proposeRedirect(address npo, uint256 milestoneId, address newNpo)
+
+vote(uint256 proposalId, bool support)
+
+execute(uint256 proposalId)
+
+If passed and milestone frozen, moves funds to newNpo or back to donors.
+
+1.6. InsuranceFund
+State
+
+Holds slashed tokens.
+
+Functions
+
+payout(address to, uint256 amount)
+
+Only callable by GovernanceManager for small refunds or auditor compensation.
+
+2. Off-Chain Services & Data Storage
+IPFS/Ceramic Node
+
+Store all report CIDs, evidence files, and panel notes.
+
+VRF Oracle
+
+Provide on-chain randomness for auditor and panel selection.
+
+Backend API
+
+Expose endpoints for:
+
+Creating bounties (UI submits to createBounty)
+
+Listing active bounties, assigned auditors, deadlines.
+
+Fetching report & evidence CIDs to display in UI.
+
+Triggering on-chain functions (submitVote, finalizeBounty, etc.)
+
+Frontend UI
+
+Auditor Dashboard: shows available bounties, allows opt-in, vote submission, evidence upload.
+
+NPO Dashboard: milestone submission, track escrow balances, view audit status.
+
+Donor Portal: donate (calls deposit), view milestone statuses, trigger refunds.
+
+DAO Gov UI: propose & vote on disputes, redirect funds, manage insurance payouts.
+
+3. Workflow Sequence
+Donor calls EscrowManager.deposit(npo, milestoneId) with crypto.
+
+Platform (backend) calls AuditBountyManager.createBounty(npo, milestoneId, rewardPool).
+
+Auditors stake via AuditorRegistry.registerAuditor.
+
+Auditors see new bounty, call optInBounty(bountyId).
+
+At start, AuditorRegistry + VRF select N auditors, store in bounty.auditors.
+
+Auditors off-chain research → upload evidence to IPFS → call submitVote(bountyId, vote, reportCID, evidence[]).
+
+End of concern window:
+
+If no Concern: finalizeBounty tallies, releases or freezes via EscrowManager.
+
+If Concern: startDispute → panel votes → finalizeDispute → release or freeze.
+
+If frozen, DAO can call GovernanceManager.proposeRedirect → vote → execute to redirect or refund.
+
+AuditorRegistry updates stakes & reputations; slashes or rewards auditors accordingly; slashed tokens flow into InsuranceFund.
+
+InsuranceFund can be used (via gov) to reimburse small donor refunds or compensate auditors.
+

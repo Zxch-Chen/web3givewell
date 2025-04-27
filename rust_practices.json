@@ -1,0 +1,252 @@
+{
+    "document_title": "Effective Rust: 35 Specific Ways to Improve Your Rust Code",
+    "author": "David Drysdale",
+    "sections": [
+      {
+        "id": 1,
+        "title": "Prefer Borrowed Types for Arguments",
+        "key": "Accept &str instead of &String; accept &[T] instead of &Vec<T>.",
+        "description": "By taking the most general borrowed form, your functions can accept owned and borrowed data seamlessly without extra allocations.",
+        "example_code": "fn greet(name: &str) { println!(\"Hello, {}!\", name); }"
+      },
+      {
+        "id": 2,
+        "title": "Concatenate Strings with format!",
+        "key": "Use format!(\"{}{}\", a, b) over manual push_str or + operations.",
+        "description": "The `format!` macro composes strings efficiently and readably, avoiding temporary allocations and tedious `push_str` chains.",
+        "example_code": "let full = format!(\"{} {}\", first_name, last_name);"
+      },
+      {
+        "id": 3,
+        "title": "Constructor Idiom",
+        "key": "Implement new() constructors on types for centralized initialization.",
+        "description": "Providing `fn new(...) -> Self` ensures all invariants are set in one place, improving safety and discoverability.",
+        "example_code": "impl Point { pub fn new(x: f64, y: f64) -> Self { Self { x, y } } }"
+      },
+      {
+        "id": 4,
+        "title": "Use the Default Trait",
+        "key": "Derive or impl Default to supply zero-value or empty-value constructors.",
+        "description": "Implementing `Default` lets callers create types with sensible defaults via `T::default()`, streamlining builder patterns and tests.",
+        "example_code": "#[derive(Default)] struct Config { timeout: u64, retries: u8 }"
+      },
+      {
+        "id": 5,
+        "title": "Treat Collections as Smart Pointers",
+        "key": "Access Vec<T> via &[T]; Box<T> via &T for coercion benefits.",
+        "description": "Slices (`&[T]`) and references (`&T`) coerce automatically from `&Vec<T>` and `&Box<T>`, so prefer the leaner target type.",
+        "example_code": "fn sum(nums: &[i32]) -> i32 { nums.iter().sum() }"
+      },
+      {
+        "id": 6,
+        "title": "Finalize in Destructors",
+        "key": "Perform cleanup (e.g. flush) in Drop impls to ensure resource safety.",
+        "description": "Implementing `Drop` lets you automatically release resources (files, locks) when a value goes out of scope.",
+        "example_code": "impl Drop for Logger { fn drop(&mut self) { self.0.flush().unwrap(); } }"
+      },
+      {
+        "id": 7,
+        "title": "Use mem::take and mem::replace",
+        "key": "Swap out fields safely: let old = mem::take(&mut self.field); …",
+        "description": "`mem::take` leaves the field set to its `Default` value, avoiding `Option::take` boilerplate and double-`unwrap`.",
+        "example_code": "let old = std::mem::take(&mut self.buffer);"
+      },
+      {
+        "id": 8,
+        "title": "On-Stack Dynamic Dispatch",
+        "key": "Use trait objects behind a & or Box to avoid heap allocations when possible.",
+        "description": "By storing trait objects (`&dyn Trait` or `Box<dyn Trait>`) on the stack, you can defer the dispatch decision without extra indirection.",
+        "example_code": "fn run(task: &dyn Fn()) { task(); }"
+      },
+      {
+        "id": 9,
+        "title": "Idiomatic Error Handling",
+        "key": "Return Result<T, E>; use ? for propagation rather than unwrap() in library code.",
+        "description": "Propagating errors via `?` preserves context and lets callers decide how to handle failures.",
+        "example_code": "fn read_file(path: &Path) -> Result<String, io::Error> { fs::read_to_string(path)?; Ok(contents) }"
+      },
+      {
+        "id": 10,
+        "title": "Accept Strings Idiomatically",
+        "key": "fn foo<S: AsRef<str>>(s: S) → … for maximum input flexibility.",
+        "description": "`AsRef<str>` lets your function accept `&String`, `String`, and `&str` with no extra cost.",
+        "example_code": "fn log_message<S: AsRef<str>>(msg: S) { println!(\"{}\", msg.as_ref()); }"
+      },
+      {
+        "id": 11,
+        "title": "Pass Strings Idiomatically",
+        "key": "fn foo(s: impl Into<String>) → … when you need ownership cheaply.",
+        "description": "`Into<String>` lets the caller pass either a `String` or `&str`, converting under the hood.",
+        "example_code": "fn store(s: impl Into<String>) { let owned: String = s.into(); }"
+      },
+      {
+        "id": 12,
+        "title": "Iterating over an Option",
+        "key": "Use if let Some(x) = opt { … } or opt.iter() in for-loops.",
+        "description": "`opt.iter()` produces zero or one iteration, nicely fitting `for` loops when you don’t need `None`–`else` logic.",
+        "example_code": "for user in opt_user.iter() { send_email(user); }"
+      },
+      {
+        "id": 13,
+        "title": "Pass Variables to Closures",
+        "key": "Use move -- for FnOnce and avoid lifetime gymnastics.",
+        "description": "`move` closures capture by value, sidestepping complex borrow checker interactions when spawning threads or futures.",
+        "example_code": "let handle = std::thread::spawn(move || println!(\"Got: {}\", x));"
+      },
+      {
+        "id": 14,
+        "title": "Privacy for Extensibility",
+        "key": "Make fields private and expose constructors/getters for forward-compatibility.",
+        "description": "Encapsulating your struct’s internals lets you evolve representation without breaking downstream users.",
+        "example_code": "pub struct User { name: String } // field private\nimpl User { pub fn name(&self) -> &str { &self.name } }"
+      },
+      {
+        "id": 15,
+        "title": "Easy doc Initialization",
+        "key": "Use include_str!() or doc macros to embed examples/test data.",
+        "description": "Including external files in your docs ensures code examples stay up-to-date with real data.",
+        "example_code": "/// Example:\n/// ```rust\n/// let data = include_str!(\"data.txt\");\n/// ```"
+      },
+      {
+        "id": 16,
+        "title": "Temporary Mutability",
+        "key": "Use a local `mut` binding in a block to limit its scope.",
+        "description": "Wrapping mutation in `{ let mut x = …; /* mutate */; x }` keeps your API’s signature clean and immutable by default.",
+        "example_code": "let result = { let mut v = Vec::new(); v.push(1); v };"
+      },
+      {
+        "id": 17,
+        "title": "Return Consumed Arg on Error",
+        "key": "fn parse(s: String) → Result<T, String> returns ownership on Err(s).",
+        "description": "Returning the original `String` on error avoids partial consumption and lets callers retry or inspect input.",
+        "example_code": "fn parse_int(s: String) -> Result<i32, String> { s.parse().map_err(|_| s) }"
+      },
+      {
+        "id": 18,
+        "title": "Command Pattern",
+        "key": "Encapsulate requests as objects implementing a common trait for undo/redo.",
+        "description": "Each command struct implements `execute()` and `undo()`, letting you queue, log, or replay actions uniformly.",
+        "example_code": "trait Command { fn execute(&mut self); fn undo(&mut self); }"
+      },
+      {
+        "id": 19,
+        "title": "Interpreter Pattern",
+        "key": "Represent language grammar as types and evaluate via visitor.",
+        "description": "Define an AST of enums/structs and implement an `eval()` method or visitor trait to interpret or compile.",
+        "example_code": "enum Expr { Val(i32), Add(Box<Expr>, Box<Expr>) }"
+      },
+      {
+        "id": 20,
+        "title": "Newtype Pattern",
+        "key": "Use tuple structs to add type-safety without runtime cost.",
+        "description": "Wrapping primitives in a single-field struct prevents mixing different units or domains by mistake.",
+        "example_code": "struct Meters(f64);\nfn distance(a: Meters, b: Meters) -> Meters { Meters((a.0 - b.0).abs()) }"
+      },
+      {
+        "id": 21,
+        "title": "RAII Guards",
+        "key": "Implement guard types that release resources in Drop.",
+        "description": "Types like `MutexGuard` unlock automatically; you can create your own for file locks, transactions, etc.",
+        "example_code": "struct LockGuard<'a>(&'a Mutex);\nimpl<'a> Drop for LockGuard<'a> { fn drop(&mut self) { /* unlock */ } }"
+      },
+      {
+        "id": 22,
+        "title": "Strategy Pattern",
+        "key": "Define interchangeable algorithms behind a common trait.",
+        "description": "Clients accept a `&dyn Trait` or generic `impl Trait`, letting you swap algorithms at runtime or compile-time.",
+        "example_code": "trait Compression { fn compress(&self, data: &[u8]) -> Vec<u8>; }\nfn compress_with<C: Compression>(s: &C, d: &[u8]) -> Vec<u8> { s.compress(d) }"
+      },
+      {
+        "id": 23,
+        "title": "Visitor Pattern",
+        "key": "Separate algorithms from object structures via accept()/visit().",
+        "description": "Each AST node implements `accept(visitor)`, letting you add new operations without modifying node types.",
+        "example_code": "trait Visitor { fn visit_node(&mut self, n: &Node); }\nimpl Node { fn accept<V: Visitor>(&self, v: &mut V) { v.visit_node(self) } }"
+      },
+      {
+        "id": 24,
+        "title": "Builder Pattern",
+        "key": "Use builder structs with chained methods to construct complex objects.",
+        "description": "Chained setters returning `&mut Self` plus a `build()` method give a fluent API and enforce invariants.",
+        "example_code": "struct FooBuilder { x: i32 }\nimpl FooBuilder { fn x(mut self, v: i32) -> Self { self.x = v; self } fn build(self) -> Foo { Foo { x: self.x } } }"
+      },
+      {
+        "id": 25,
+        "title": "Fold for Construction",
+        "key": "Use Iterator::fold to accumulate state cleanly.",
+        "description": "`fold` is a powerful way to transform an iterator into a single result with no mutable variables.",
+        "example_code": "let sum = nums.iter().fold(0, |acc, &v| acc + v);"
+      },
+      {
+        "id": 26,
+        "title": "Compose Structs",
+        "key": "Favor small reusable components over large monoliths.",
+        "description": "Build complex types by embedding simpler ones, improving testability and separation of concerns.",
+        "example_code": "struct Engine { /* */ }\nstruct Car { engine: Engine, /* */ }"
+      },
+      {
+        "id": 27,
+        "title": "Prefer Small Crates",
+        "key": "Publish focused crates; compose them rather than one large crate.",
+        "description": "Small, single-purpose crates are easier to maintain, test, and version independently.",
+        "example_code": "// In Cargo.toml\n[dependencies]\nserde = \"1.0\"\nserde_json = \"1.0\""
+      },
+      {
+        "id": 28,
+        "title": "Contain Unsafe in Small Modules",
+        "key": "Isolate unsafe code behind safe abstractions with rigorous tests.",
+        "description": "Wrap all `unsafe` blocks in a minimal module and expose only safe, documented APIs.",
+        "example_code": "mod unsafe_impl { unsafe fn raw(); pub fn safe() { unsafe { raw() } } }"
+      },
+      {
+        "id": 29,
+        "title": "Object-Based FFI APIs",
+        "key": "Wrap raw FFI pointers in safe structs implementing Drop.",
+        "description": "Encapsulating `*mut c_void` in a Rust struct prevents misuse and ensures proper cleanup.",
+        "example_code": "struct Ctx(*mut c_void);\nimpl Drop for Ctx { fn drop(&mut self) { unsafe { c_free(self.0) } } }"
+      },
+      {
+        "id": 30,
+        "title": "Consolidate Types into Wrappers",
+        "key": "Unify C FFI types into Rust enums/structs for safety and ergonomics.",
+        "description": "Mapping disparate C constants into a Rust `enum` gives you pattern matching and eliminates invalid states.",
+        "example_code": "enum Mode { Read, Write }\nimpl From<i32> for Mode { /* map ints */ }"
+      },
+      {
+        "id": 31,
+        "title": "Avoid Clone to Satisfy Borrow Checker",
+        "key": "Refactor signatures to accept references instead of cloning.",
+        "description": "Cloning circumvents borrows at runtime cost; redesign APIs to take `&T` where possible.",
+        "example_code": "fn process(data: &Data) { /* no clone needed */ }"
+      },
+      {
+        "id": 32,
+        "title": "Avoid #[deny(warnings)] in Libraries",
+        "key": "Allow warnings to avoid breaking downstream crates.",
+        "description": "Library authors should permit warnings so that users’ codebases aren’t forced to patch instantly.",
+        "example_code": "// in lib.rs\n#![warn(missing_docs)]  // but avoid deny(warnings)"
+      },
+      {
+        "id": 33,
+        "title": "Mind Deref Polymorphism",
+        "key": "Rely on Deref only for smart pointer patterns, not to bypass abstractions.",
+        "description": "`Deref` should simplify pointer-like types, not skirt around visibility or invariants.",
+        "example_code": "struct MyBox<T>(Box<T>);\nimpl<T> Deref for MyBox<T> { type Target = T; fn deref(&self) -> &T { &*self.0 } }"
+      },
+      {
+        "id": 34,
+        "title": "Generics as Type Classes",
+        "key": "Use traits to define behavior and constrain generics precisely.",
+        "description": "Trait bounds express capabilities clearly (e.g., `T: Display + Clone`), preventing over-broad implementations.",
+        "example_code": "fn print_and_clone<T: Display + Clone>(x: T) { println!(\"{}\", x); let _ = x.clone(); }"
+      },
+      {
+        "id": 35,
+        "title": "Functional Optics",
+        "key": "Leverage crates like optic_rs or use closures for lens-style data access.",
+        "description": "Optics let you focus on nested fields immutably, composing getters and setters functionally.",
+        "example_code": "let view = lens!(User, address.city); let city = view.get(&user);"
+      }
+    ]
+  }
+  

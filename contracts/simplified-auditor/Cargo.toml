@@ -1,0 +1,33 @@
+[package]
+name = "simplified-auditor"
+version = "0.1.0"
+authors = ["ImpactChain Team"]
+edition = "2021"
+
+[dependencies]
+ink = { version = "4.3.0", default-features = false }
+ink_primitives = { version = "4.3.0", default-features = false }
+scale = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.6.0", default-features = false, features = ["derive"] }
+
+[lib]
+name = "simplified_auditor"
+path = "src/lib.rs"
+crate-type = [
+    "cdylib",
+    "rlib"
+]
+
+[features]
+default = ["std"]
+std = [
+    "ink/std",
+    "scale/std",
+    "scale-info/std",
+    "ink_primitives/std",
+]
+ink-as-dependency = []
+# Ink linter features
+__ink_dylint_Storage = []
+__ink_dylint_EventBase = []
+__ink_dylint_Constructor = []

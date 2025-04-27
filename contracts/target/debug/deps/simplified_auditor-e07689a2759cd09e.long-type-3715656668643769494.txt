@@ -1,0 +1,1 @@
+ink::storage::Mapping<ink::ink_primitives::AccountId, Auditor, ResolverKey<AutoKey, ManualKey<2147179627>>>

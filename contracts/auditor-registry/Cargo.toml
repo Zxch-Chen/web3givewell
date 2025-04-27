@@ -1,0 +1,30 @@
+[package]
+name = "auditor-registry"
+version = "0.1.0"
+authors = ["ImpactChain Team"]
+edition = "2021"
+
+[dependencies]
+ink = { workspace = true }
+ink_primitives = { workspace = true }
+scale = { workspace = true }
+scale-info = { workspace = true }
+openbrush = { git = "https://github.com/Supercolony-net/openbrush-contracts", tag = "v2.3.0", default-features = false, features = ["psp22", "access_control", "pausable", "reentrancy_guard"] }
+
+[lib]
+path = "src/lib.rs"
+crate-type = [
+    "cdylib",
+    "rlib"
+]
+
+[features]
+default = ["std"]
+std = [
+    "ink/std",
+    "scale/std",
+    "scale-info/std",
+    "ink_primitives/std",
+    "openbrush/std",
+]
+ink-as-dependency = []

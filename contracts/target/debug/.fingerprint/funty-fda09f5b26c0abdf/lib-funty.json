@@ -1,0 +1,1 @@
+{"rustc":13016524307099611025,"features":"[]","declared_features":"[\"default\", \"std\"]","target":9620198247805587849,"profile":2241668132362809309,"path":13585796499803576504,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/funty-fda09f5b26c0abdf/dep-lib-funty","checksum":false}}],"rustflags":["-A","clippy::all"],"config":2069994364910194474,"compile_kind":0}

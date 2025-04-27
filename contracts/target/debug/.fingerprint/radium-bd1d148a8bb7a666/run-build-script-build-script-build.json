@@ -1,0 +1,1 @@
+{"rustc":13016524307099611025,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[13404482562374806937,"build_script_build",false,6235254711141304114]],"local":[{"Precalculated":"0.7.0"}],"rustflags":["-A","clippy::all"],"config":0,"compile_kind":0}
